@@ -3,10 +3,9 @@ _G.Settings = {
     ShowDistance = true
 }
 
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local billboards = {}
 
 -- Hàm tạo BillboardGui
 local function createBillboard(name)
@@ -19,72 +18,61 @@ local function createBillboard(name)
     textLabel.BackgroundTransparency = 1
     textLabel.TextColor3 = Color3.new(1, 1, 1)
     textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.TextScaled = true
+    textLabel.TextSize = 16
     textLabel.Text = name
     textLabel.Parent = billboard
 
     return billboard, textLabel
 end
 
--- Gắn Billboard cho nhân vật
-local function attachBillboard(player)
-    if player == LocalPlayer then return end
+-- Tạo bảng Billboard cho mỗi người chơi
+local billboards = {}
 
-    player.CharacterAdded:Connect(function(char)
-        local humanoidRootPart = char:WaitForChild("HumanoidRootPart", 10)
-        local humanoid = char:WaitForChild("Humanoid", 10)
-        if humanoidRootPart and humanoid then
-            local billboard, label = createBillboard(player.Name)
-            billboard.Adornee = humanoidRootPart
-            billboard.Parent = char
-            billboards[player] = {Label = label, Billboard = billboard, Humanoid = humanoid}
-
-            humanoid.Died:Connect(function()
-                billboard.Enabled = false
-            end)
-        end
-    end)
-end
-
--- Áp dụng cho tất cả người chơi
 for _, player in ipairs(Players:GetPlayers()) do
-    attachBillboard(player)
-end
-
--- Khi người chơi mới vào
-Players.PlayerAdded:Connect(attachBillboard)
-
--- Khi người chơi rời game
-Players.PlayerRemoving:Connect(function(player)
-    if billboards[player] then
-        billboards[player].Billboard:Destroy()
-        billboards[player] = nil
+    if player ~= LocalPlayer and player.Character then
+        local humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
+        local billboard, label = createBillboard(player.Name)
+        billboard.Adornee = humanoidRootPart
+        billboard.Parent = player.Character
+        billboards[player] = label
     end
-end)
+end
 
 -- Cập nhật mỗi frame
 RunService.RenderStepped:Connect(function()
-    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-
-    for player, data in pairs(billboards) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and data.Humanoid.Health > 0 then
-            local targetRoot = player.Character.HumanoidRootPart
-            local text = ""
-
-            if _G.Settings.ShowNames then
-                text = player.Name
+    for player, label in pairs(billboards) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoidRootPart = player.Character.HumanoidRootPart
+            local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if myRoot then
+                local text = ""
+                if _G.Settings.ShowNames then
+                    text = player.Name
+                end
+                if _G.Settings.ShowDistance then
+                    local distance = math.floor((myRoot.Position - humanoidRootPart.Position).Magnitude)
+                    text = text .. " [" .. distance .. " studs]"
+                end
+                label.Text = text
             end
-
-            if _G.Settings.ShowDistance then
-                local distance = math.floor((myRoot.Position - targetRoot.Position).Magnitude)
-                text = text .. " [" .. distance .. " studs]"
-            end
-
-            data.Label.Text = text
-            data.Billboard.Enabled = true
-        else
-            data.Billboard.Enabled = false
         end
+    end
+end)
+
+-- Nếu người chơi mới vào game
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(char)
+        local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+        local billboard, label = createBillboard(player.Name)
+        billboard.Adornee = humanoidRootPart
+        billboard.Parent = char
+        billboards[player] = label
+    end)
+end)
+
+-- Nếu người chơi rời game
+Players.PlayerRemoving:Connect(function(player)
+    if billboards[player] then
+        billboards[player] = nil
     end
 end)
