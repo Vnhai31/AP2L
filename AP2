@@ -114,7 +114,7 @@ local function updateESP()
         local humanoid = obj.humanoid
         if humanoid and humanoid.Health > 0 and hrp then
             local dist = (myHRP.Position - hrp.Position).Magnitude
-            if dist <= 3000 then
+            if dist <= 1500 then
                 obj.billboard.Enabled = true
                 obj.highlight.Enabled = true
 
