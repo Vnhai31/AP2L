@@ -40,16 +40,6 @@ local function createESP(player)
     highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-    local headBox = Instance.new("BoxHandleAdornment")
-    headBox.Name = "HeadBox"
-    headBox.Size = Vector3.new(2, 1, 2)
-    headBox.Color3 = Color3.new(1, 1, 1)
-    headBox.Transparency = 0.5
-    headBox.ZIndex = 0
-    headBox.AlwaysOnTop = true
-    headBox.Adornee = nil
-    headBox.Parent = nil
-
     local tracer = Drawing.new("Line")
     tracer.Visible = false
     tracer.Color = _G.Settings.TracerColor
@@ -130,7 +120,7 @@ local function updateESP()
         local humanoid = obj.humanoid
         if humanoid and humanoid.Health > 0 and hrp then
             local dist = (myHRP.Position - hrp.Position).Magnitude
-            if dist <= 3000 then
+            if dist <= 1500 then
                 obj.billboard.Enabled = true
                 obj.highlight.Enabled = true
                 if obj.headBox then obj.headBox.Visible = true end
