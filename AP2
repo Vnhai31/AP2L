@@ -1,4 +1,4 @@
--- SETTINGS
+-- SETTINGS-- SETTINGS
 _G.Settings = {
     Enabled = true,
     ShowNames = true,
@@ -189,4 +189,3 @@ UserInputService.InputBegan:Connect(function(input, isProcessed)
         setESPVisible(_G.Settings.Enabled)
     end
 end)
-
