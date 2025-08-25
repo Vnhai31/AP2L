@@ -1,12 +1,14 @@
+-- SETTINGS
 _G.Settings = {
     Enabled = true,
     ShowNames = true,
     ShowDistance = true,
+    ShowHealth = true, -- Hiển thị HP
     EnableTracer = true,
-    TracerColor = Color3.fromRGB(255, 255, 255),
     TracerThickness = 1,
+    TracerColor = Color3.fromRGB(255, 255, 255),
     TracerTransparency = 0.8,
-    ToggleKey = Enum.KeyCode.K
+    ToggleKey = Enum.KeyCode.K -- Nút bật/tắt
 }
 
 local Players = game:GetService("Players")
@@ -39,7 +41,6 @@ local function createESP(player)
     highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-    -- Thêm tracer (sử dụng Drawing API)
     local tracer = Drawing.new("Line")
     tracer.Visible = false
     tracer.Color = _G.Settings.TracerColor
@@ -50,17 +51,19 @@ local function createESP(player)
 end
 
 local function removeESP(player)
-    local obj = ESPObjects[player]
-    if not obj then return end
-    if obj.billboard then obj.billboard:Destroy() end
-    if obj.highlight then obj.highlight:Destroy() end
-    if obj.tracer then obj.tracer:Remove() end
-    ESPObjects[player] = nil
+    if ESPObjects[player] then
+        local obj = ESPObjects[player]
+        if obj.billboard then obj.billboard:Destroy() end
+        if obj.highlight then obj.highlight:Destroy() end
+        if obj.tracer then obj.tracer:Remove() end
+        ESPObjects[player] = nil
+    end
 end
 
 local function setupESP(player, character)
     if player == LocalPlayer then return end
     removeESP(player)
+
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
     local humanoid = character:FindFirstChild("Humanoid")
     if not hrp or not humanoid then return end
@@ -68,6 +71,7 @@ local function setupESP(player, character)
     local billboard, label, highlight, tracer = createESP(player)
     billboard.Adornee = hrp
     billboard.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
     highlight.Adornee = character
     highlight.Parent = character
 
@@ -99,8 +103,7 @@ local function updateESP()
         return
     end
 
-    local myChar = LocalPlayer.Character
-    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHRP then
         setESPVisible(false)
         return
@@ -111,19 +114,24 @@ local function updateESP()
         local humanoid = obj.humanoid
         if humanoid and humanoid.Health > 0 and hrp then
             local dist = (myHRP.Position - hrp.Position).Magnitude
-            local inRange = dist <= 3000
-            obj.billboard.Enabled = inRange
-            obj.highlight.Enabled = inRange
+            if dist <= 3000 then
+                obj.billboard.Enabled = true
+                obj.highlight.Enabled = true
 
-            if inRange then
+                -- Cập nhật nội dung text
                 local text = ""
                 if _G.Settings.ShowNames then text = player.Name end
                 if _G.Settings.ShowDistance then
                     text = text .. (text ~= "" and " [" or "[") .. math.floor(dist) .. " studs]"
                 end
+                if _G.Settings.ShowHealth and humanoid then
+                    local hp = math.floor(humanoid.Health)
+                    local maxHp = math.floor(humanoid.MaxHealth)
+                    text = text .. " | HP: " .. hp .. "/" .. maxHp
+                end
                 obj.label.Text = text
 
-                -- Tracer logic
+                -- Tracer
                 if _G.Settings.EnableTracer then
                     local rootPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                     local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
@@ -138,6 +146,8 @@ local function updateESP()
                     obj.tracer.Visible = false
                 end
             else
+                obj.billboard.Enabled = false
+                obj.highlight.Enabled = false
                 obj.tracer.Visible = false
             end
         else
@@ -171,10 +181,12 @@ end)
 
 RunService.RenderStepped:Connect(updateESP)
 
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
+-- TOGGLE ESP
+UserInputService.InputBegan:Connect(function(input, isProcessed)
+    if isProcessed then return end
     if input.KeyCode == _G.Settings.ToggleKey then
         _G.Settings.Enabled = not _G.Settings.Enabled
         setESPVisible(_G.Settings.Enabled)
     end
 end)
+
