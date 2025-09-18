@@ -195,7 +195,7 @@ local function StartESP()
     end)
 end
 
--- GUI NHẬP KEY
+-- GUI NHẬP KEY (có hide key)
 if _G.KeyRequired then
     local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     ScreenGui.ResetOnSpawn = false
@@ -235,19 +235,32 @@ if _G.KeyRequired then
     Button.Font = Enum.Font.SourceSansBold
     Button.TextSize = 16
 
+    -- 🔒 Hide key khi nhập
+    local hiddenKey = ""
+    TextBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local real = TextBox.Text
+        if #real > #hiddenKey then
+            hiddenKey = hiddenKey .. real:sub(-1)
+        elseif #real < #hiddenKey then
+            hiddenKey = hiddenKey:sub(1, #hiddenKey-1)
+        end
+        TextBox.Text = string.rep("*", #hiddenKey)
+        TextBox.CursorPosition = #TextBox.Text + 1
+    end)
+
     Button.MouseButton1Click:Connect(function()
-        if TextBox.Text == _G.Key then
+        if hiddenKey == _G.Key then
             print("🔑 Key đúng, ESP mở")
             _G.KeyUnlocked = true
             ScreenGui:Destroy()
             StartESP()
         else
+            hiddenKey = ""
             TextBox.Text = ""
             TextBox.PlaceholderText = "Sai key, thử lại!"
         end
     end)
 else
-    -- nếu không cần key thì bật ESP luôn
     _G.KeyUnlocked = true
     StartESP()
 end
