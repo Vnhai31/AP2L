@@ -12,7 +12,7 @@ _G.Settings = {
 }
 
 --🔑 KEY SYSTEM
-_G.Key = "12345"          -- key đúng
+_G.Key = "taoyeumayconcho"          -- key đúng
 _G.KeyRequired = true     -- bật key system
 _G.KeyUnlocked = false    -- chưa nhập key thì ESP bị khóa
 
