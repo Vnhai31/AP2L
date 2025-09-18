@@ -26,7 +26,7 @@ local Camera = workspace.CurrentCamera
 --------------------------------------------------------
 -- TẠO GUI NHẬP KEY
 if _G.KeyRequired then
-    local ScreenGui = Instance.new("Nhập key", LocalPlayer:WaitForChild("PlayerGui"))
+    local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     ScreenGui.ResetOnSpawn = false
 
     local Frame = Instance.new("Frame", ScreenGui)
@@ -253,3 +253,4 @@ UserInputService.InputBegan:Connect(function(input, isProcessed)
         setESPVisible(_G.Settings.Enabled)
     end
 end)
+
