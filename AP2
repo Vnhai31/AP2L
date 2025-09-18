@@ -1,4 +1,4 @@
--- SETTINGS-- SETTINGS
+-- SETTINGS
 _G.Settings = {
     Enabled = true,
     ShowNames = true,
@@ -11,12 +11,75 @@ _G.Settings = {
     ToggleKey = Enum.KeyCode.K -- Nút bật/tắt
 }
 
+-- KEY SYSTEM
+_G.Key = "taoyeumayconcho" -- Key bạn đặt
+_G.InputKey = nil
+_G.KeyRequired = true -- bật/tắt key system
+_G.KeyUnlocked = false -- mặc định khóa
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+--------------------------------------------------------
+-- TẠO GUI NHẬP KEY
+if _G.KeyRequired then
+    local ScreenGui = Instance.new("Nhập key", LocalPlayer:WaitForChild("PlayerGui"))
+    ScreenGui.ResetOnSpawn = false
+
+    local Frame = Instance.new("Frame", ScreenGui)
+    Frame.Size = UDim2.new(0, 250, 0, 120)
+    Frame.Position = UDim2.new(0.5, -125, 0.5, -60)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Frame.BorderSizePixel = 0
+    Frame.Active = true
+    Frame.Draggable = true
+
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Enter Key"
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.Font = Enum.Font.SourceSansBold
+    Title.TextSize = 18
+
+    local TextBox = Instance.new("TextBox", Frame)
+    TextBox.Size = UDim2.new(1, -20, 0, 40)
+    TextBox.Position = UDim2.new(0, 10, 0, 35)
+    TextBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    TextBox.Text = ""
+    TextBox.PlaceholderText = "Nhập key..."
+    TextBox.TextColor3 = Color3.fromRGB(255,255,255)
+    TextBox.Font = Enum.Font.SourceSans
+    TextBox.TextSize = 16
+
+    local Button = Instance.new("TextButton", Frame)
+    Button.Size = UDim2.new(1, -20, 0, 30)
+    Button.Position = UDim2.new(0, 10, 0, 80)
+    Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    Button.Text = "Submit"
+    Button.TextColor3 = Color3.new(1,1,1)
+    Button.Font = Enum.Font.SourceSansBold
+    Button.TextSize = 16
+
+    Button.MouseButton1Click:Connect(function()
+        if TextBox.Text == _G.Key then
+            print("Key đúng, script hoạt động")
+            ScreenGui:Destroy()
+            _G.KeyUnlocked = true -- mở khóa ESP
+        else
+            TextBox.Text = ""
+            TextBox.PlaceholderText = "Sai key, thử lại!"
+        end
+    end)
+else
+    _G.KeyUnlocked = true -- nếu không yêu cầu key thì mở sẵn
+end
+--------------------------------------------------------
+
+-- ESP SYSTEM
 local ESPObjects = {}
 
 local function createESP(player)
@@ -98,7 +161,8 @@ local function setESPVisible(state)
 end
 
 local function updateESP()
-    if not _G.Settings.Enabled then
+    -- Ngăn ESP hoạt động nếu chưa unlock key
+    if not _G.Settings.Enabled or not _G.KeyUnlocked then
         setESPVisible(false)
         return
     end
@@ -189,62 +253,3 @@ UserInputService.InputBegan:Connect(function(input, isProcessed)
         setESPVisible(_G.Settings.Enabled)
     end
 end)
--- KEY SYSTEM
-_G.Key = "taoyeumayconcho" -- Key bạn đặt
-_G.InputKey = nil
-_G.KeyRequired = true -- bật/tắt key system
-
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-if _G.KeyRequired then
-    local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-    ScreenGui.ResetOnSpawn = false
-
-    local Frame = Instance.new("Frame", ScreenGui)
-    Frame.Size = UDim2.new(0, 250, 0, 120)
-    Frame.Position = UDim2.new(0.5, -125, 0.5, -60)
-    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Frame.BorderSizePixel = 0
-    Frame.Active = true
-    Frame.Draggable = true
-
-    local Title = Instance.new("TextLabel", Frame)
-    Title.Size = UDim2.new(1, 0, 0, 30)
-    Title.BackgroundTransparency = 1
-    Title.Text = "Enter Key"
-    Title.TextColor3 = Color3.fromRGB(255,255,255)
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 18
-
-    local TextBox = Instance.new("TextBox", Frame)
-    TextBox.Size = UDim2.new(1, -20, 0, 40)
-    TextBox.Position = UDim2.new(0, 10, 0, 35)
-    TextBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    TextBox.Text = ""
-    TextBox.PlaceholderText = "Nhập key..."
-    TextBox.TextColor3 = Color3.fromRGB(255,255,255)
-    TextBox.Font = Enum.Font.SourceSans
-    TextBox.TextSize = 16
-
-    local Button = Instance.new("TextButton", Frame)
-    Button.Size = UDim2.new(1, -20, 0, 30)
-    Button.Position = UDim2.new(0, 10, 0, 80)
-    Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    Button.Text = "Submit"
-    Button.TextColor3 = Color3.new(1,1,1)
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 16
-
-    Button.MouseButton1Click:Connect(function()
-        if TextBox.Text == _G.Key then
-            print("Key đúng, script hoạt động")
-            ScreenGui:Destroy()
-            _G.KeyRequired = false -- mở khóa script
-        else
-            TextBox.Text = ""
-            TextBox.PlaceholderText = "Sai key, thử lại!"
-        end
-    end)
-end
