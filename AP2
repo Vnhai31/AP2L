@@ -1,21 +1,20 @@
--- SETTINGS
+--⚙ SETTINGS
 _G.Settings = {
     Enabled = true,
     ShowNames = true,
     ShowDistance = true,
-    ShowHealth = true, -- Hiển thị HP
+    ShowHealth = true,
     EnableTracer = true,
     TracerThickness = 1,
     TracerColor = Color3.fromRGB(255, 255, 255),
     TracerTransparency = 0.8,
-    ToggleKey = Enum.KeyCode.K -- Nút bật/tắt
+    ToggleKey = Enum.KeyCode.K
 }
 
--- KEY SYSTEM
-_G.Key = "taoyeumayconcho" -- Key bạn đặt
-_G.InputKey = nil
-_G.KeyRequired = true -- bật/tắt key system
-_G.KeyUnlocked = false -- mặc định khóa
+--🔑 KEY SYSTEM
+_G.Key = "12345"          -- key đúng
+_G.KeyRequired = true     -- bật key system
+_G.KeyUnlocked = false    -- chưa nhập key thì ESP bị khóa
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -23,82 +22,25 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
---------------------------------------------------------
--- TẠO GUI NHẬP KEY
-if _G.KeyRequired then
-    local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-    ScreenGui.ResetOnSpawn = false
-
-    local Frame = Instance.new("Frame", ScreenGui)
-    Frame.Size = UDim2.new(0, 250, 0, 120)
-    Frame.Position = UDim2.new(0.5, -125, 0.5, -60)
-    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Frame.BorderSizePixel = 0
-    Frame.Active = true
-    Frame.Draggable = true
-
-    local Title = Instance.new("TextLabel", Frame)
-    Title.Size = UDim2.new(1, 0, 0, 30)
-    Title.BackgroundTransparency = 1
-    Title.Text = "Enter Key"
-    Title.TextColor3 = Color3.fromRGB(255,255,255)
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 18
-
-    local TextBox = Instance.new("TextBox", Frame)
-    TextBox.Size = UDim2.new(1, -20, 0, 40)
-    TextBox.Position = UDim2.new(0, 10, 0, 35)
-    TextBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    TextBox.Text = ""
-    TextBox.PlaceholderText = "Nhập key..."
-    TextBox.TextColor3 = Color3.fromRGB(255,255,255)
-    TextBox.Font = Enum.Font.SourceSans
-    TextBox.TextSize = 16
-
-    local Button = Instance.new("TextButton", Frame)
-    Button.Size = UDim2.new(1, -20, 0, 30)
-    Button.Position = UDim2.new(0, 10, 0, 80)
-    Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    Button.Text = "Submit"
-    Button.TextColor3 = Color3.new(1,1,1)
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 16
-
-    Button.MouseButton1Click:Connect(function()
-        if TextBox.Text == _G.Key then
-            print("Key đúng, script hoạt động")
-            ScreenGui:Destroy()
-            _G.KeyUnlocked = true -- mở khóa ESP
-        else
-            TextBox.Text = ""
-            TextBox.PlaceholderText = "Sai key, thử lại!"
-        end
-    end)
-else
-    _G.KeyUnlocked = true -- nếu không yêu cầu key thì mở sẵn
-end
---------------------------------------------------------
-
--- ESP SYSTEM
 local ESPObjects = {}
 
+--📌 ESP FUNCTIONS
 local function createESP(player)
     local billboard = Instance.new("BillboardGui")
     billboard.Size = UDim2.new(0, 200, 0, 50)
     billboard.AlwaysOnTop = true
-    billboard.StudsOffset = Vector3.new(0, 50, 0)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
 
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(1, 0, 1, 0)
     textLabel.BackgroundTransparency = 1
     textLabel.TextColor3 = Color3.new(1, 1, 1)
     textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.TextSize = 10
+    textLabel.TextSize = 12
     textLabel.Text = player.Name
     textLabel.Parent = billboard
 
     local highlight = Instance.new("Highlight")
-    highlight.Name = "ESP_Highlight"
     highlight.FillTransparency = 1
     highlight.OutlineTransparency = 0
     highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
@@ -161,7 +103,6 @@ local function setESPVisible(state)
 end
 
 local function updateESP()
-    -- Ngăn ESP hoạt động nếu chưa unlock key
     if not _G.Settings.Enabled or not _G.KeyUnlocked then
         setESPVisible(false)
         return
@@ -182,20 +123,18 @@ local function updateESP()
                 obj.billboard.Enabled = true
                 obj.highlight.Enabled = true
 
-                -- Cập nhật nội dung text
                 local text = ""
                 if _G.Settings.ShowNames then text = player.Name end
                 if _G.Settings.ShowDistance then
                     text = text .. (text ~= "" and " [" or "[") .. math.floor(dist) .. " studs]"
                 end
-                if _G.Settings.ShowHealth and humanoid then
+                if _G.Settings.ShowHealth then
                     local hp = math.floor(humanoid.Health)
                     local maxHp = math.floor(humanoid.MaxHealth)
                     text = text .. " | HP: " .. hp .. "/" .. maxHp
                 end
                 obj.label.Text = text
 
-                -- Tracer
                 if _G.Settings.EnableTracer then
                     local rootPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                     local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
@@ -220,36 +159,95 @@ local function updateESP()
     end
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        player.CharacterAdded:Connect(function(char)
-            setupESP(player, char)
-        end)
-        if player.Character then
-            setupESP(player, player.Character)
+local function StartESP()
+    print("✅ ESP đã khởi động")
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            player.CharacterAdded:Connect(function(char)
+                setupESP(player, char)
+            end)
+            if player.Character then
+                setupESP(player, player.Character)
+            end
         end
     end
+
+    Players.PlayerAdded:Connect(function(player)
+        if player ~= LocalPlayer then
+            player.CharacterAdded:Connect(function(char)
+                setupESP(player, char)
+            end)
+        end
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        removeESP(player)
+    end)
+
+    RunService.RenderStepped:Connect(updateESP)
+
+    UserInputService.InputBegan:Connect(function(input, isProcessed)
+        if isProcessed then return end
+        if input.KeyCode == _G.Settings.ToggleKey then
+            _G.Settings.Enabled = not _G.Settings.Enabled
+            setESPVisible(_G.Settings.Enabled)
+        end
+    end)
 end
 
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        player.CharacterAdded:Connect(function(char)
-            setupESP(player, char)
-        end)
-    end
-end)
+-- GUI NHẬP KEY
+if _G.KeyRequired then
+    local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+    ScreenGui.ResetOnSpawn = false
 
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
+    local Frame = Instance.new("Frame", ScreenGui)
+    Frame.Size = UDim2.new(0, 250, 0, 120)
+    Frame.Position = UDim2.new(0.5, -125, 0.5, -60)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Frame.BorderSizePixel = 0
+    Frame.Active = true
+    Frame.Draggable = true
 
-RunService.RenderStepped:Connect(updateESP)
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Enter Key"
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.Font = Enum.Font.SourceSansBold
+    Title.TextSize = 18
 
--- TOGGLE ESP
-UserInputService.InputBegan:Connect(function(input, isProcessed)
-    if isProcessed then return end
-    if input.KeyCode == _G.Settings.ToggleKey then
-        _G.Settings.Enabled = not _G.Settings.Enabled
-        setESPVisible(_G.Settings.Enabled)
-    end
-end)
+    local TextBox = Instance.new("TextBox", Frame)
+    TextBox.Size = UDim2.new(1, -20, 0, 40)
+    TextBox.Position = UDim2.new(0, 10, 0, 35)
+    TextBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    TextBox.Text = ""
+    TextBox.PlaceholderText = "Nhập key..."
+    TextBox.TextColor3 = Color3.fromRGB(255,255,255)
+    TextBox.Font = Enum.Font.SourceSans
+    TextBox.TextSize = 16
+
+    local Button = Instance.new("TextButton", Frame)
+    Button.Size = UDim2.new(1, -20, 0, 30)
+    Button.Position = UDim2.new(0, 10, 0, 80)
+    Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    Button.Text = "Submit"
+    Button.TextColor3 = Color3.new(1,1,1)
+    Button.Font = Enum.Font.SourceSansBold
+    Button.TextSize = 16
+
+    Button.MouseButton1Click:Connect(function()
+        if TextBox.Text == _G.Key then
+            print("🔑 Key đúng, ESP mở")
+            _G.KeyUnlocked = true
+            ScreenGui:Destroy()
+            StartESP()
+        else
+            TextBox.Text = ""
+            TextBox.PlaceholderText = "Sai key, thử lại!"
+        end
+    end)
+else
+    -- nếu không cần key thì bật ESP luôn
+    _G.KeyUnlocked = true
+    StartESP()
+end
