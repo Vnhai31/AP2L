@@ -1,7 +1,8 @@
--- ====== Rayfield ESP Tối Ưu + KeySystem ====== --
+-- ====== Rayfield ESP Hoàn Chỉnh Tối Ưu + KeySystem ====== --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 Rayfield:LoadConfiguration()
 
+-- ====== Window + KeySystem ======
 local Window = Rayfield:CreateWindow({
     Name = "ESP Script",
     LoadingTitle = "Rayfield ESP",
@@ -19,10 +20,10 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- Tab ESP
+-- ====== Tab ESP ======
 local ESPTab = Window:CreateTab("ESP", 4483362458)
 
--- ====== Settings ======
+-- ====== Services & Variables ======
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -33,7 +34,7 @@ local ESPEnabled = true
 local TracerEnabled = true
 local HealthBarEnabled = true
 local MaxDistance = 3000
-local UpdateInterval = 0.35 -- update khoảng 0.35s để giảm lag
+local UpdateInterval = 0.35 -- update health & billboard
 
 -- ====== Functions ======
 local function removeESP(player)
@@ -57,12 +58,11 @@ local function createESP(player, character)
     -- Billboard
     local billboard = Instance.new("BillboardGui")
     billboard.Size = UDim2.new(0, 120, 0, 30)
-    billboard.StudsOffset = Vector3.new(0,10,0)
+    billboard.StudsOffset = Vector3.new(0, 10, 0) -- nâng lên 10 studs
     billboard.AlwaysOnTop = true
 
-    -- TextLabel
     local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1,0,1,0)
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
     textLabel.BackgroundTransparency = 1
     textLabel.TextColor3 = Color3.new(1,1,1)
     textLabel.Font = Enum.Font.SourceSansBold
@@ -70,25 +70,27 @@ local function createESP(player, character)
     textLabel.Text = player.Name
     textLabel.Parent = billboard
 
-    -- HealthBar
+    -- Health Bar (nhỏ hơn)
     local healthBar, healthBarBg
     if HealthBarEnabled then
         healthBarBg = Instance.new("Frame", billboard)
-        healthBarBg.Size = UDim2.new(1, -4, 0.15, 0)
-        healthBarBg.Position = UDim2.new(0,2,0.8,0)
+        healthBarBg.Size = UDim2.new(0.8, 0, 0.08, 0) -- nhỏ hơn so với trước
+        healthBarBg.Position = UDim2.new(0.1, 0, 0.85, 0)
         healthBarBg.BackgroundColor3 = Color3.fromRGB(50,50,50)
         healthBarBg.BorderSizePixel = 0
+        healthBarBg.Visible = HealthBarEnabled
 
         healthBar = Instance.new("Frame", healthBarBg)
         healthBar.Size = UDim2.new(1,0,1,0)
         healthBar.BackgroundColor3 = Color3.fromRGB(0,255,0)
         healthBar.BorderSizePixel = 0
 
-        -- Cập nhật khi HP thay đổi
         humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            local hp,maxHp = humanoid.Health, humanoid.MaxHealth
-            if maxHp>0 then
-                healthBar.Size = UDim2.new(math.clamp(hp/maxHp,0,1),0,1,0)
+            if HealthBarEnabled and healthBar then
+                local hp,maxHp = humanoid.Health, humanoid.MaxHealth
+                if maxHp > 0 then
+                    healthBar.Size = UDim2.new(math.clamp(hp/maxHp,0,1),0,1,0)
+                end
             end
         end)
     end
@@ -119,7 +121,8 @@ local function createESP(player, character)
         tracer = tracer,
         hrp = hrp,
         humanoid = humanoid,
-        healthBar = healthBar
+        healthBar = healthBar,
+        healthBarBg = healthBarBg
     }
 
     humanoid.Died:Connect(function() removeESP(player) end)
@@ -146,26 +149,38 @@ task.spawn(function()
                 if show then
                     obj.label.Text = player.Name.." ["..math.floor(dist).." studs]"
                     if HealthBarEnabled and obj.healthBar then
-                        obj.healthBar.Parent.Visible = true
+                        obj.healthBarBg.Visible = true
+                    else
+                        if obj.healthBarBg then obj.healthBarBg.Visible = false end
                     end
                 else
-                    if HealthBarEnabled and obj.healthBar then
-                        obj.healthBar.Parent.Visible = false
-                    end
+                    if HealthBarEnabled and obj.healthBarBg then obj.healthBarBg.Visible = false end
                 end
+            end
+        end
+    end
+end)
 
-                -- Tracer
-                if TracerEnabled and show then
-                    local rootPos,onScreen = Camera:WorldToViewportPoint(obj.hrp.Position)
-                    local screenCenter = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
-                    obj.tracer.Visible = onScreen
-                    if onScreen then
-                        obj.tracer.From = screenCenter
-                        obj.tracer.To = Vector2.new(rootPos.X, rootPos.Y)
-                    end
-                else
-                    obj.tracer.Visible = false
+-- ====== Update Tracer ======
+RunService.RenderStepped:Connect(function()
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    for player,obj in pairs(ESPObjects) do
+        if obj.hrp and obj.humanoid and obj.humanoid.Health>0 then
+            local dist = (myHRP.Position - obj.hrp.Position).Magnitude
+            local show = ESPEnabled and TracerEnabled and dist <= MaxDistance
+
+            if show then
+                local rootPos,onScreen = Camera:WorldToViewportPoint(obj.hrp.Position)
+                local screenCenter = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+                obj.tracer.Visible = onScreen
+                if onScreen then
+                    obj.tracer.From = screenCenter
+                    obj.tracer.To = Vector2.new(rootPos.X, rootPos.Y)
                 end
+            else
+                obj.tracer.Visible = false
             end
         end
     end
@@ -184,7 +199,6 @@ Players.PlayerAdded:Connect(function(player)
         player.CharacterAdded:Connect(function(char) createESP(player,char) end)
     end
 end)
-
 Players.PlayerRemoving:Connect(removeESP)
 
 -- ====== Rayfield Menu ======
@@ -206,7 +220,9 @@ ESPTab:CreateToggle({
     Callback = function(Value)
         HealthBarEnabled = Value
         for _,obj in pairs(ESPObjects) do
-            if obj.healthBar then obj.healthBar.Parent.Visible = Value end
+            if obj.healthBarBg then
+                obj.healthBarBg.Visible = Value
+            end
         end
     end
 })
