@@ -1,60 +1,43 @@
---⚙ SETTINGS
-_G.Settings = {
-    Enabled = true,
-    ShowNames = true,
-    ShowDistance = true,
-    ShowHealth = true,
-    EnableTracer = true,
-    TracerThickness = 1,
-    TracerColor = Color3.fromRGB(255, 255, 255),
-    TracerTransparency = 0.8,
-    ToggleKey = Enum.KeyCode.K
-}
+-- ====== Rayfield ESP Script Tối Ưu + KeySystem Hoạt Động ====== --
 
---🔑 KEY SYSTEM
-_G.Key = "taoyeumayconcho"          -- key đúng
-_G.KeyRequired = true     -- bật key system
-_G.KeyUnlocked = false    -- chưa nhập key thì ESP bị khóa
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+Rayfield:LoadConfiguration()
 
+local Window = Rayfield:CreateWindow({
+    Name = "ESP Script",
+    LoadingTitle = "Rayfield ESP",
+    LoadingSubtitle = "by Bạn",
+    ConfigurationSaving = { Enabled = true, FolderName = "RayfieldESP", FileName = "Config" },
+
+    KeySystem = true, -- Bắt buộc bật key system
+    KeySettings = {
+        Title = "ESP Key",
+        Subtitle = "Nhập key để sử dụng",
+        Note = "Liên hệ admin để lấy key",
+        FileName = "UniqueESPKeyFile", -- tên file phải unique
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = {"taoyeumayconcho"} -- list key hợp lệ
+    }
+})
+
+-- Tab ESP
+local ESPTab = Window:CreateTab("ESP", 4483362458)
+
+-- ====== Cài đặt ======
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local ESPObjects = {}
+local MaxDistance = 3000
+local ESPEnabled = true
+local TracerEnabled = true
+local HealthBarEnabled = true
+local TracerUpdateInterval = 0.2 -- giảm lag
 
---📌 ESP FUNCTIONS
-local function createESP(player)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.AlwaysOnTop = true
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextColor3 = Color3.new(1, 1, 1)
-    textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.TextSize = 12
-    textLabel.Text = player.Name
-    textLabel.Parent = billboard
-
-    local highlight = Instance.new("Highlight")
-    highlight.FillTransparency = 1
-    highlight.OutlineTransparency = 0
-    highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-
-    local tracer = Drawing.new("Line")
-    tracer.Visible = false
-    tracer.Color = _G.Settings.TracerColor
-    tracer.Thickness = _G.Settings.TracerThickness
-    tracer.Transparency = _G.Settings.TracerTransparency
-
-    return billboard, textLabel, highlight, tracer
-end
-
+-- ====== Hàm xoá ESP ======
 local function removeESP(player)
     if ESPObjects[player] then
         local obj = ESPObjects[player]
@@ -65,202 +48,179 @@ local function removeESP(player)
     end
 end
 
-local function setupESP(player, character)
+-- ====== Hàm tạo ESP ======
+local function createESP(player, character)
     if player == LocalPlayer then return end
     removeESP(player)
 
-    local hrp = character:WaitForChild("HumanoidRootPart", 5)
-    local humanoid = character:FindFirstChild("Humanoid")
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not hrp or not humanoid then return end
 
-    local billboard, label, highlight, tracer = createESP(player)
+    -- Billboard nhỏ, 10 studs trên đầu nhân vật
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 100, 0, 20)
+    billboard.AlwaysOnTop = true
+    billboard.StudsOffset = Vector3.new(0, 10, 0)
+
+    -- TextLabel tên
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextSize = 12
+    textLabel.Text = player.Name
+    textLabel.Parent = billboard
+
+    -- Health Bar chỉ tạo khi bật
+    local healthBar, healthBarBg
+    if HealthBarEnabled then
+        healthBarBg = Instance.new("Frame", billboard)
+        healthBarBg.Size = UDim2.new(1, -4, 0.1, 0)
+        healthBarBg.Position = UDim2.new(0, 2, 0.55, 0)
+        healthBarBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        healthBarBg.BorderSizePixel = 0
+
+        healthBar = Instance.new("Frame", healthBarBg)
+        healthBar.Size = UDim2.new(1, 0, 1, 0)
+        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        healthBar.BorderSizePixel = 0
+
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            if HealthBarEnabled and healthBar then
+                local hp,maxHp = humanoid.Health, humanoid.MaxHealth
+                if maxHp > 0 then
+                    healthBar.Size = UDim2.new(math.clamp(hp/maxHp,0,1),0,1,0)
+                end
+            end
+        end)
+    end
+
+    -- Highlight
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+    -- Tracer
+    local tracer = Drawing.new("Line")
+    tracer.Visible = false
+    tracer.Color = Color3.fromRGB(255, 255, 255)
+    tracer.Thickness = 1
+    tracer.Transparency = 0.8
+
     billboard.Adornee = hrp
     billboard.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
     highlight.Adornee = character
     highlight.Parent = character
 
+    -- Lưu ESP
     ESPObjects[player] = {
         billboard = billboard,
-        label = label,
+        label = textLabel,
         highlight = highlight,
         tracer = tracer,
         hrp = hrp,
-        humanoid = humanoid
+        humanoid = humanoid,
+        healthBar = healthBar
     }
 
-    humanoid.Died:Connect(function()
-        removeESP(player)
-    end)
+    humanoid.Died:Connect(function() removeESP(player) end)
+    player.CharacterRemoving:Connect(function() removeESP(player) end)
 end
 
-local function setESPVisible(state)
-    for _, obj in pairs(ESPObjects) do
-        if obj.billboard then obj.billboard.Enabled = state end
-        if obj.highlight then obj.highlight.Enabled = state end
-        if obj.tracer then obj.tracer.Visible = false end
-    end
-end
+-- ====== Cập nhật Tracer + kiểm tra khoảng cách ======
+task.spawn(function()
+    while true do
+        task.wait(TracerUpdateInterval)
+        local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP then
+            for player,obj in pairs(ESPObjects) do
+                if obj.hrp and obj.humanoid and obj.humanoid.Health > 0 then
+                    local dist = (myHRP.Position - obj.hrp.Position).Magnitude
+                    local showESP = ESPEnabled and dist <= MaxDistance
 
-local function updateESP()
-    if not _G.Settings.Enabled or not _G.KeyUnlocked then
-        setESPVisible(false)
-        return
-    end
+                    -- Billboard + Highlight
+                    obj.billboard.Enabled = showESP
+                    obj.highlight.Enabled = showESP
 
-    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myHRP then
-        setESPVisible(false)
-        return
-    end
+                    -- Text + health bar
+                    if showESP then
+                        obj.label.Text = player.Name.." ["..math.floor(dist).." studs]"
+                        if HealthBarEnabled and obj.healthBar then
+                            obj.healthBar.Parent.Visible = true
+                        end
+                    else
+                        if HealthBarEnabled and obj.healthBar then
+                            obj.healthBar.Parent.Visible = false
+                        end
+                    end
 
-    for player, obj in pairs(ESPObjects) do
-        local hrp = obj.hrp
-        local humanoid = obj.humanoid
-        if humanoid and humanoid.Health > 0 and hrp then
-            local dist = (myHRP.Position - hrp.Position).Magnitude
-            if dist <= 3000 then
-                obj.billboard.Enabled = true
-                obj.highlight.Enabled = true
-
-                local text = ""
-                if _G.Settings.ShowNames then text = player.Name end
-                if _G.Settings.ShowDistance then
-                    text = text .. (text ~= "" and " [" or "[") .. math.floor(dist) .. " studs]"
-                end
-                if _G.Settings.ShowHealth then
-                    local hp = math.floor(humanoid.Health)
-                    local maxHp = math.floor(humanoid.MaxHealth)
-                    text = text .. " | HP: " .. hp .. "/" .. maxHp
-                end
-                obj.label.Text = text
-
-                if _G.Settings.EnableTracer then
-                    local rootPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                    local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                    if onScreen then
-                        obj.tracer.From = screenBottom
-                        obj.tracer.To = Vector2.new(rootPos.X, rootPos.Y)
-                        obj.tracer.Visible = true
+                    -- Tracer từ giữa màn hình tới HRP
+                    if TracerEnabled and showESP then
+                        local rootPos,onScreen = Camera:WorldToViewportPoint(obj.hrp.Position)
+                        local screenCenter = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+                        obj.tracer.Visible = onScreen
+                        if onScreen then
+                            obj.tracer.From = screenCenter
+                            obj.tracer.To = Vector2.new(rootPos.X, rootPos.Y)
+                        end
                     else
                         obj.tracer.Visible = false
                     end
-                else
-                    obj.tracer.Visible = false
                 end
-            else
-                obj.billboard.Enabled = false
-                obj.highlight.Enabled = false
-                obj.tracer.Visible = false
-            end
-        else
-            removeESP(player)
-        end
-    end
-end
-
-local function StartESP()
-    print("✅ ESP đã khởi động")
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            player.CharacterAdded:Connect(function(char)
-                setupESP(player, char)
-            end)
-            if player.Character then
-                setupESP(player, player.Character)
             end
         end
     end
+end)
 
-    Players.PlayerAdded:Connect(function(player)
-        if player ~= LocalPlayer then
-            player.CharacterAdded:Connect(function(char)
-                setupESP(player, char)
-            end)
-        end
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        removeESP(player)
-    end)
-
-    RunService.RenderStepped:Connect(updateESP)
-
-    UserInputService.InputBegan:Connect(function(input, isProcessed)
-        if isProcessed then return end
-        if input.KeyCode == _G.Settings.ToggleKey then
-            _G.Settings.Enabled = not _G.Settings.Enabled
-            setESPVisible(_G.Settings.Enabled)
-        end
-    end)
+-- ====== Gán ESP cho tất cả player hiện tại + respawn ======
+for _,player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        if player.Character then createESP(player, player.Character) end
+        player.CharacterAdded:Connect(function(char) createESP(player, char) end)
+    end
 end
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        player.CharacterAdded:Connect(function(char) createESP(player,char) end)
+    end
+end)
+Players.PlayerRemoving:Connect(removeESP)
 
--- GUI NHẬP KEY (có hide key)
-if _G.KeyRequired then
-    local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-    ScreenGui.ResetOnSpawn = false
+-- ====== Menu Rayfield ======
+ESPTab:CreateToggle({
+    Name = "Bật/Tắt ESP",
+    CurrentValue = ESPEnabled,
+    Callback = function(Value) ESPEnabled = Value end
+})
 
-    local Frame = Instance.new("Frame", ScreenGui)
-    Frame.Size = UDim2.new(0, 250, 0, 120)
-    Frame.Position = UDim2.new(0.5, -125, 0.5, -60)
-    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Frame.BorderSizePixel = 0
-    Frame.Active = true
-    Frame.Draggable = true
+ESPTab:CreateToggle({
+    Name = "Bật/Tắt Tracer",
+    CurrentValue = TracerEnabled,
+    Callback = function(Value) TracerEnabled = Value end
+})
 
-    local Title = Instance.new("TextLabel", Frame)
-    Title.Size = UDim2.new(1, 0, 0, 30)
-    Title.BackgroundTransparency = 1
-    Title.Text = "Enter Key"
-    Title.TextColor3 = Color3.fromRGB(255,255,255)
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 18
-
-    local TextBox = Instance.new("TextBox", Frame)
-    TextBox.Size = UDim2.new(1, -20, 0, 40)
-    TextBox.Position = UDim2.new(0, 10, 0, 35)
-    TextBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    TextBox.Text = ""
-    TextBox.PlaceholderText = "Nhập key..."
-    TextBox.TextColor3 = Color3.fromRGB(255,255,255)
-    TextBox.Font = Enum.Font.SourceSans
-    TextBox.TextSize = 16
-
-    local Button = Instance.new("TextButton", Frame)
-    Button.Size = UDim2.new(1, -20, 0, 30)
-    Button.Position = UDim2.new(0, 10, 0, 80)
-    Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    Button.Text = "Submit"
-    Button.TextColor3 = Color3.new(1,1,1)
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 16
-
-    -- 🔒 Hide key khi nhập
-    local hiddenKey = ""
-    TextBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local real = TextBox.Text
-        if #real > #hiddenKey then
-            hiddenKey = hiddenKey .. real:sub(-1)
-        elseif #real < #hiddenKey then
-            hiddenKey = hiddenKey:sub(1, #hiddenKey-1)
+ESPTab:CreateToggle({
+    Name = "Hiển thị Health Bar",
+    CurrentValue = HealthBarEnabled,
+    Callback = function(Value)
+        HealthBarEnabled = Value
+        for _, obj in pairs(ESPObjects) do
+            if obj.healthBar then
+                obj.healthBar.Parent.Visible = Value
+            end
         end
-        TextBox.Text = string.rep("*", #hiddenKey)
-        TextBox.CursorPosition = #TextBox.Text + 1
-    end)
+    end
+})
 
-    Button.MouseButton1Click:Connect(function()
-        if hiddenKey == _G.Key then
-            print("🔑 Key đúng, ESP mở")
-            _G.KeyUnlocked = true
-            ScreenGui:Destroy()
-            StartESP()
-        else
-            hiddenKey = ""
-            TextBox.Text = ""
-            TextBox.PlaceholderText = "Sai key, thử lại!"
-        end
-    end)
-else
-    _G.KeyUnlocked = true
-    StartESP()
-end
+ESPTab:CreateSlider({
+    Name = "Khoảng cách ESP",
+    Range = {100,5000},
+    Increment = 100,
+    Suffix = "Studs",
+    CurrentValue = MaxDistance,
+    Callback = function(Value) MaxDistance = Value end
+})
