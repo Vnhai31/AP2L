@@ -16,7 +16,7 @@ local Window = Rayfield:CreateWindow({
         FileName = "UniqueESPKeyFile",
         SaveKey = true,
         GrabKeyFromSite = false,
-        Key = {"taoyeumayconcho"}
+        Key = {"taoyeumayconcho","taoyeumaycondi"}
     }
 })
 
