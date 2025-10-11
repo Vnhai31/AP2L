@@ -23,15 +23,18 @@ getgenv().Jumppower = Players.LocalPlayer.Character.Humanoid.JumpPower
 getgenv().TPSpeed = 3
 getgenv().TPWalk = false
 
--- Hàm Hitbox Expander với Hook
+-- Hàm Hitbox Expander cải tiến
 local function HitboxExpander(status, teamCheck, size, transparency)
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
 
-    -- Hook __index để spoof properties
+    -- Hook để bypass anti-cheat
     local mt = getrawmetatable(game)
     local old_index = mt.__index
+    local old_newindex = mt.__newindex
+    local old_namecall = mt.__namecall
     setreadonly(mt, false)
+
     mt.__index = newcclosure(function(self, key)
         if self:IsA("BasePart") and self.Name == "Head" then
             if key == "Size" then
@@ -43,35 +46,47 @@ local function HitboxExpander(status, teamCheck, size, transparency)
             elseif key == "Anchored" then
                 return false
             end
+        elseif self:IsA("BasePart") and key == "AssemblyLinearVelocity" then
+            return Vector3.new(0, 0, 0)
         end
         return old_index(self, key)
     end)
 
-    -- Hook __namecall để chặn Kick/FireServer
-    local old_namecall = mt.__namecall
+    mt.__newindex = newcclosure(function(self, key, value)
+        if self:IsA("BasePart") and self.Name == "Head" and (key == "Size" or key == "Transparency" or key == "CanCollide" or key == "Anchored") then
+            return
+        end
+        old_newindex(self, key, value)
+    end)
+
     mt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
         local args = {...}
         if method == "Kick" or (method == "FireServer" and (tostring(self):find("AntiCheat") or tostring(self):find("Report"))) then
+            print("Blocked Kick/Report: ", tostring(self))
             return
         end
         return old_namecall(self, ...)
     end)
     setreadonly(mt, true)
 
-    -- Logic hitbox
     if status then
         for _, v in pairs(Players:GetPlayers()) do
             if v.Name ~= Players.LocalPlayer.Name then
                 pcall(function()
                     if not teamCheck or (teamCheck and Players.LocalPlayer.Team ~= v.Team) then
-                        v.Character.Head.Size = Vector3.new(size, size, size)
-                        v.Character.Head.Transparency = transparency
-                        v.Character.Head.BrickColor = BrickColor.new("Really black")
-                        v.Character.Head.Material = "Neon"
-                        v.Character.Head.CanCollide = false
-                        v.Character.Head.Anchored = true
-                        v.Character.Head.CFrame = v.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1.5, 0)
+                        if v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then
+                            v.Character.Head.Size = Vector3.new(size, size, size)
+                            v.Character.Head.Transparency = transparency
+                            v.Character.Head.BrickColor = BrickColor.new("Really black")
+                            v.Character.Head.Material = "Neon"
+                            v.Character.Head.CanCollide = false
+                            v.Character.Head.Anchored = true
+                            v.Character.Head.CFrame = v.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1.5, 0)
+                            print("Hitbox applied for: ", v.Name)
+                        else
+                            print("Error: Head or HumanoidRootPart not found for ", v.Name)
+                        end
                     end
                 end)
             end
@@ -80,12 +95,15 @@ local function HitboxExpander(status, teamCheck, size, transparency)
         for _, v in pairs(Players:GetPlayers()) do
             if v.Name ~= Players.LocalPlayer.Name then
                 pcall(function()
-                    v.Character.Head.Size = Vector3.new(1, 1, 1)
-                    v.Character.Head.Transparency = 1
-                    v.Character.Head.BrickColor = BrickColor.new("Medium stone grey")
-                    v.Character.Head.Material = "Plastic"
-                    v.Character.Head.CanCollide = true
-                    v.Character.Head.Anchored = false
+                    if v.Character and v.Character:FindFirstChild("Head") then
+                        v.Character.Head.Size = Vector3.new(1, 1, 1)
+                        v.Character.Head.Transparency = 1
+                        v.Character.Head.BrickColor = BrickColor.new("Medium stone grey")
+                        v.Character.Head.Material = "Plastic"
+                        v.Character.Head.CanCollide = true
+                        v.Character.Head.Anchored = false
+                        print("Hitbox reset for: ", v.Name)
+                    end
                 end)
             end
         end
