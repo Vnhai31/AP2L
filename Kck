@@ -4,7 +4,7 @@ Rayfield:LoadConfiguration()
 
 -- ====== Window + KeySystem ======
 local Window = Rayfield:CreateWindow({
-    Name = "ESP Script",
+    Name = "ESP Script của Bác Hai Đờ Lít",
     LoadingTitle = "Rayfield ESP",
     LoadingSubtitle = "by Bạn",
     ConfigurationSaving = { Enabled = true, FolderName = "RayfieldESP", FileName = "Config" },
